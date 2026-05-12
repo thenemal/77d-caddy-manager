@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this host is
 
-LXC container `edge-proxy` (Debian 12, Caddy v2.10.2) acting as the public TLS reverse proxy for the `compagnie-lily.org` homelab. Public DNS chain: `*.compagnie-lily.org` → `77d.ddns.net` (DDNS) → home WAN → this LXC at `192.168.45.37`. All upstream services live on the same `192.168.45.0/24` LAN.
+LXC container `edge-proxy` (Debian 12, Caddy v2.10.2) acting as the public TLS reverse proxy for the `compagnie-lily.org` homelab. Public DNS chain: `homeN.compagnie-lily.org` → **A records pointing at the current home WAN IP** → this LXC at `192.168.45.37`. The A records are refreshed by a cron-driven updater (see "Public DNS state" below). All upstream services live on the same `192.168.45.0/24` LAN.
 
-The working directory `/root/caddy-manager/` is intentionally empty — there is no application source. The only artifact under management is the Caddy configuration and its operational state.
+The working directory `/root/caddy-manager/` holds the operational scripts (cPanel API wrapper, DNS updater) and is the local checkout of the private GitHub repo `thenemal/77d-caddy-manager`. The Caddy *configuration* still lives at `/etc/caddy/Caddyfile` and is not in this repo.
 
 ## The actual config lives outside this directory
 
@@ -55,11 +55,18 @@ Use `reload` (not `restart`) for config changes — it preserves in-flight conne
 
 The `home6` block has a leading space before the site address. Caddyfile tolerates it, but `caddy fmt` will rewrite it — expect a diff.
 
-## DNS / certs
+## Public DNS state
 
-DNS records for every public subdomain are **CNAMEs to `77d.ddns.net`** (not direct A records). For a new subdomain to obtain a cert: add the CNAME at the registrar (o2switch — see "Known DNS issue" below), confirm ports 80/443 are forwarded to `192.168.45.37` on the home WAN, then reload Caddy.
+Since 2026-05-12, `homeN.compagnie-lily.org` records are **direct A records** pointing at the current home WAN IP (was CNAMEs to `77d.ddns.net` before). The cron-driven updater on this LXC keeps them in sync:
 
-Caddy's ACME setup uses **Let's Encrypt as the primary issuer with automatic fallback to ZeroSSL** (HTTP-01 and TLS-ALPN-01 challenges). Both issuers are tried before giving up. Cert + key storage:
+- Script: `/root/caddy-manager/update-77d-records.sh` (also in the repo)
+- Cadence: every 5 min via root crontab; record TTL is 300s to match
+- IP discovery: still reads `77d.ddns.net` (No-IP DDNS) via 1.1.1.1, then writes the A records via the cPanel UAPI. Issue #1 tracks removing No-IP from this chain.
+- Log: `/var/log/77d-updater.log`
+
+For a new subdomain to obtain a cert: add the `homeN` A record via cPanel (or by extending the `NAMES` array in the updater and rerunning), confirm ports 80/443 are forwarded to `192.168.45.37` on the home WAN, then reload Caddy.
+
+Caddy's ACME setup uses **Let's Encrypt as the primary issuer with automatic fallback to ZeroSSL** (HTTP-01 and TLS-ALPN-01 challenges). Cert + key storage:
 
 ```
 /var/lib/caddy/.local/share/caddy/certificates/
@@ -71,15 +78,18 @@ The presence of a `zerossl` directory for a given name is a tell that Let's Encr
 
 ## Known DNS issue (o2switch zone)
 
-The authoritative nameservers `ns1/ns2.o2switch.net` return **SERVFAIL on CAA queries** for the `home8.compagnie-lily.org` label and anything below it (`home8`, `files.home8`, …) — while the parent `compagnie-lily.org` answers CAA cleanly. This breaks Let's Encrypt issuance (LE refuses to issue without a clean CAA lookup), and the only reason those names currently have certs is the ZeroSSL fallback. Verify with:
+Between 2026-05-09 and 2026-05-11 the authoritative NS `ns1/ns2.o2switch.net` regressed: they now SERVFAIL on `A` and `CAA` queries for any name whose CNAME points outside the zone. Every `homeN.compagnie-lily.org` previously CNAME'd to `77d.ddns.net.` and so all of them broke. The names still answer correctly when queried specifically for `CNAME` type. Apex records and in-zone-target CNAMEs (e.g. `www` → apex) are unaffected.
+
+**This is worked around** by replacing the CNAMEs with direct A records (see "Public DNS state" above). With no CNAME to chase, the buggy code path is never hit. A support ticket is open with o2switch; the workaround stays in place until/unless they confirm a fix.
+
+Verify the regression (or its resolution):
 
 ```bash
-dig @ns1.o2switch.net home8.compagnie-lily.org CAA      # SERVFAIL
-dig @ns1.o2switch.net files.home8.compagnie-lily.org CAA # SERVFAIL
-dig @ns1.o2switch.net compagnie-lily.org CAA             # NOERROR
+dig @ns1.o2switch.net home5.compagnie-lily.org A     +norecurse  # should be NOERROR now
+dig @ns1.o2switch.net home5.compagnie-lily.org CAA   +norecurse  # should be NOERROR now
 ```
 
-When adding a new `homeN` subdomain, ensure the registrar adds it as a plain CNAME to `77d.ddns.net` (matching `home`…`home7`, `home9`) so the CAA tree-walk works and Let's Encrypt issuance succeeds. Note: cPanel→BIND replication can leave a freshly-added record returning SERVFAIL on CAA for up to ~1h — wait it out, Caddy will auto-retry ACME. The `*.home8` chain needs to be re-created in the zone to fix the SERVFAIL (delete + re-add the CNAME so cPanel re-emits it cleanly) — do it via the cPanel API (below) or the o2switch DNS panel.
+If/when o2switch confirms a fix: stop the cron, then either edit each `homeN` back to a CNAME via cPanel Zone Editor, or via API (`DNS/mass_edit_zone` with `record_type:"CNAME"`, `data:["77d.ddns.net."]`).
 
 ## o2switch cPanel API (DNS management)
 
@@ -96,6 +106,10 @@ bash cpanel-api.sh DNS/parse_zone "zone=compagnie-lily.org"     # full zone (43 
 bash cpanel-api.sh DNS/mass_edit_zone "zone=...&serial=...&..." # edits — needs current serial
 bash cpanel-api.sh Tokens/list                                   # API token metadata
 ```
+
+`DNS/mass_edit_zone` takes `zone=`, `serial=` (current SOA serial — wrong serial is rejected, preventing concurrent-edit races), and one or more `edit={"line_index":N,"dname":"<label>","record_type":"...","ttl":N,"data":[...]}` parameters. The URL-encoding of the `edit=` JSON is finicky — see `test-dns-edit.sh` and `update-77d-records.sh` for the pattern (`jq -nc` to build, `jq -sRr @uri` to encode). Both auth NS pick up edits within ~30s for in-place edits.
+
+`feature.dnssec: "0"` on this `subaccount_pro` plan: DNSSEC is not available on this account, so don't go looking for a DNSSEC pane as the cause of zone weirdness.
 
 **Token rotation**: `Tokens/revoke` matches by `name=` and removes **every** token sharing that name. Always create the new token with a *distinct* name (e.g. add a `-v2` or date suffix), verify it works, then revoke the old name explicitly. Reusing the name during overlap will revoke the token you just started using.
 

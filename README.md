@@ -2,13 +2,23 @@
 
 Operational scripts for the `compagnie-lily.org` edge-proxy LXC.
 
-This LXC runs Caddy as the public TLS reverse proxy for `*.compagnie-lily.org`
+This LXC runs Caddy as the public TLS reverse proxy for `homeN.compagnie-lily.org`
 homelab services. Public DNS chain:
 
-    *.compagnie-lily.org → 77d.ddns.net (No-IP DDNS) → home WAN → this LXC
+    homeN.compagnie-lily.org → A record (refreshed by cron) → home WAN → this LXC
+
+The A records are kept in sync with the current home WAN IP by
+`update-77d-records.sh`, running on this LXC via root cron.
 
 See `CLAUDE.md` for the full operational picture (Caddyfile conventions,
-ACME setup, known DNS issues at o2switch).
+ACME setup, the o2switch DNS regression that drove this workaround).
+
+## Status
+
+- **Live since 2026-05-12.** All `homeN` records are direct A records, cron
+  refresh runs every 5 minutes.
+- **Open improvement**: drop the No-IP DDNS middleman and detect the WAN IP
+  directly via an HTTP echo service. Tracked in [#1](https://github.com/thenemal/77d-caddy-manager/issues/1).
 
 ## Contents
 
@@ -61,14 +71,18 @@ bash update-77d-records.sh --apply
 
 ## Cron
 
-Once the first `--apply` has flipped the records, schedule periodic refresh:
+The cron entry is installed in root's crontab on the edge-proxy LXC:
 
 ```cron
 */5 * * * * /root/caddy-manager/update-77d-records.sh --apply >> /var/log/77d-updater.log 2>&1
 ```
 
 5-minute cadence matches the 300s TTL on the records. If the WAN IP changes,
-clients pick up the new value within 5–10 minutes.
+clients pick up the new value within 5–10 minutes. The script is idempotent
+and exits cheaply when nothing has changed, so the cadence is harmless.
+
+Log: `/var/log/77d-updater.log` on the LXC. Tail it to confirm refresh
+behavior after a WAN IP change.
 
 ## Reverting to CNAMEs
 
