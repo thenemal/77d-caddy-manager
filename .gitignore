@@ -1,0 +1,5 @@
+.cpanel-api.env
+.env
+*.env.local
+.claude/
+*.log
