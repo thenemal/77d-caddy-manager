@@ -20,7 +20,7 @@ ZONE="compagnie-lily.org"
 DDNS_SOURCE="77d.ddns.net"
 PUBLIC_RESOLVER="1.1.1.1"
 TTL=300
-NAMES=(home home2 home3 home4 home5 home6 home7 home8 home9 home10 home11)
+NAMES=(home home2 home3 home4 home5 home6 home7 home8 home9 home10 home11 home12)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER="${SCRIPT_DIR}/cpanel-api.sh"
