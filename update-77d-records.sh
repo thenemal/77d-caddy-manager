@@ -6,6 +6,12 @@
 # record pointing there. Works around the o2switch authoritative-NS bug that
 # SERVFAILs on out-of-bailiwick CNAME chasing.
 #
+# Scope: this script only REFRESHES existing records. Names in $NAMES that
+# don't yet exist in the zone are skipped with a WARN ("no record for X in
+# zone, skipping"). To onboard a new subdomain, first create the A record
+# (cPanel Zone Editor, or `DNS/mass_edit_zone` with an `add=` parameter),
+# then extend $NAMES so future runs keep it in sync.
+#
 # Idempotent: only emits edits for records whose type or value differs.
 # Default mode is dry-run; pass --apply to actually push to cPanel.
 set -euo pipefail
@@ -14,7 +20,7 @@ ZONE="compagnie-lily.org"
 DDNS_SOURCE="77d.ddns.net"
 PUBLIC_RESOLVER="1.1.1.1"
 TTL=300
-NAMES=(home home2 home3 home4 home5 home6 home7 home8 home9 home10)
+NAMES=(home home2 home3 home4 home5 home6 home7 home8 home9 home10 home11)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER="${SCRIPT_DIR}/cpanel-api.sh"

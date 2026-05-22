@@ -64,7 +64,12 @@ Since 2026-05-12, `homeN.compagnie-lily.org` records are **direct A records** po
 - IP discovery: still reads `77d.ddns.net` (No-IP DDNS) via 1.1.1.1, then writes the A records via the cPanel UAPI. Issue #1 tracks removing No-IP from this chain.
 - Log: `/var/log/77d-updater.log`
 
-For a new subdomain to obtain a cert: add the `homeN` A record via cPanel (or by extending the `NAMES` array in the updater and rerunning), confirm ports 80/443 are forwarded to `192.168.45.37` on the home WAN, then reload Caddy.
+For a new subdomain to obtain a cert:
+
+1. **Create** the `homeN` A record in the zone — either via the cPanel Zone Editor, or via API: `DNS/mass_edit_zone` with `add={"dname":"homeN","record_type":"A","ttl":300,"data":["<current-WAN-IP>"]}`. The updater script only **refreshes existing** records — extending `NAMES` alone will not create a new record (it logs `no record for X in zone, skipping`).
+2. Append the new name to `NAMES` in `update-77d-records.sh` so subsequent WAN-IP changes are picked up.
+3. Confirm ports 80/443 are forwarded to `192.168.45.37` on the home WAN.
+4. Add the site block to `/etc/caddy/Caddyfile` and reload Caddy.
 
 Caddy's ACME setup uses **Let's Encrypt as the primary issuer with automatic fallback to ZeroSSL** (HTTP-01 and TLS-ALPN-01 challenges). Cert + key storage:
 
