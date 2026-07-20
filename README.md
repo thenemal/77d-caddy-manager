@@ -31,7 +31,7 @@ this host from scratch, follow `RESTORE.md`.
 | `caddy/caddy.service` | Reference snapshot of the stock systemd unit (unmodified). |
 | `crontab.root` | The root crontab entry that runs the DNS updater every 5 min. |
 | `cpanel-api.sh` | Thin wrapper around o2switch cPanel UAPI. |
-| `test-dns-edit.sh` | One-shot smoke test of the write path (changes `home5` TTL only). |
+| `test-dns-edit.sh` | One-shot smoke test of the write path (changes `home2` TTL only). |
 | `update-77d-records.sh` | The main updater — flips/refreshes `homeN` A records to the current WAN IP. |
 | `.cpanel-api.env` | **Not committed.** Holds cPanel host/user/token. Create from `.cpanel-api.env.example`. |
 
@@ -68,7 +68,7 @@ $EDITOR .cpanel-api.env
 # 2. Smoke test API access
 bash cpanel-api.sh Variables/get_user_information | jq .status
 
-# 3. Smoke test write path (changes home5 TTL only, easy revert)
+# 3. Smoke test write path (changes home2 TTL only, easy revert)
 bash test-dns-edit.sh
 
 # 4. Dry-run the updater

@@ -94,21 +94,6 @@ home4.compagnie-lily.org {
 	reverse_proxy 192.168.45.39:8123
 }
 
-home5.compagnie-lily.org {
-	import handle-security
-	import block-robots
-
-	@health path /healthz
-	respond @health 200
-
-	log {
-		output file /var/log/caddy/home5-access.log
-		format json
-	}
-
-	reverse_proxy 192.168.45.54:8000
-}
-
 home6.compagnie-lily.org {
 	handle /.well-known/matrix/client {
 		header Content-Type application/json

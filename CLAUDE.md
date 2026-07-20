@@ -42,7 +42,7 @@ Use `reload` (not `restart`) for config changes — it preserves in-flight conne
   New public sites should `import handle-security` and (unless the upstream needs to be indexed) `import block-robots`.
 - **Per-site health probe**: most sites expose `respond /healthz 200` for external uptime checks — keep this pattern when adding sites.
 - **Per-site access log**: `output file /var/log/caddy/<site>-access.log` in JSON format. Each site gets its own log file; do not share log paths between sites (the Caddyfile currently has duplicates — see below).
-- **Naming**: subdomains follow `homeN.compagnie-lily.org` for general services. Don't reuse a slot — pick the next free `homeN`.
+- **Naming**: subdomains follow `homeN.compagnie-lily.org` for general services. Don't reuse a slot — pick the next free `homeN`. **Retired slots: `home5`** (OneDrive MCP, decommissioned 2026-07-20 — site block, A record, and `NAMES` entry all removed). Next free slot is `home13`.
 - **Upstream**: `reverse_proxy <LAN-IP>:<port>` against `192.168.45.x`. Hostnames are not used for upstreams.
 
 ## Special-case sites
@@ -53,7 +53,7 @@ Use `reload` (not `restart`) for config changes — it preserves in-flight conne
 
 ## Cosmetic note
 
-The `home6` block has a leading space before the site address. Caddyfile tolerates it, but `caddy fmt` will rewrite it — expect a diff.
+The `home6` block used to carry a leading space before its site address; `caddy fmt --overwrite` normalized it on 2026-07-20. No outstanding formatting drift.
 
 ## Public DNS state
 
@@ -90,8 +90,8 @@ Between 2026-05-09 and 2026-05-11 the authoritative NS `ns1/ns2.o2switch.net` re
 Verify the regression (or its resolution):
 
 ```bash
-dig @ns1.o2switch.net home5.compagnie-lily.org A     +norecurse  # should be NOERROR now
-dig @ns1.o2switch.net home5.compagnie-lily.org CAA   +norecurse  # should be NOERROR now
+dig @ns1.o2switch.net home2.compagnie-lily.org A     +norecurse  # should be NOERROR now
+dig @ns1.o2switch.net home2.compagnie-lily.org CAA   +norecurse  # should be NOERROR now
 ```
 
 If/when o2switch confirms a fix: stop the cron, then either edit each `homeN` back to a CNAME via cPanel Zone Editor, or via API (`DNS/mass_edit_zone` with `record_type:"CNAME"`, `data:["77d.ddns.net."]`).

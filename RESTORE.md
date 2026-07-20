@@ -83,7 +83,7 @@ hooks automatically — this one line per clone is required.)
 ```bash
 systemctl status caddy --no-pager
 curl -sS http://127.0.0.1:2019/config/apps/http/servers/srv0/routes | jq '.[].match[].host'
-for h in home home2 home3 home4 home5 home6 home7 home8 home9 home10 home11 home12; do
+for h in home home2 home3 home4 home6 home7 home8 home9 home10 home11 home12; do
   curl -sS -o /dev/null -w "%{http_code} $h\n" https://$h.compagnie-lily.org/healthz
 done
 crontab -l | grep update-77d
