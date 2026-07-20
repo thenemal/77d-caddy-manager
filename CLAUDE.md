@@ -42,8 +42,15 @@ Use `reload` (not `restart`) for config changes — it preserves in-flight conne
   New public sites should `import handle-security` and (unless the upstream needs to be indexed) `import block-robots`.
 - **Per-site health probe**: most sites expose `respond /healthz 200` for external uptime checks — keep this pattern when adding sites.
 - **Per-site access log**: `output file /var/log/caddy/<site>-access.log` in JSON format. Each site gets its own log file; do not share log paths between sites (the Caddyfile currently has duplicates — see below).
-- **Naming**: subdomains follow `homeN.compagnie-lily.org` for general services. Don't reuse a slot — pick the next free `homeN`. **Retired slots: `home5`** (OneDrive MCP, decommissioned 2026-07-20 — site block, A record, and `NAMES` entry all removed). Next free slot is `home13`.
+- **Naming**: subdomains follow `homeN.compagnie-lily.org` for general services. Don't reuse a slot — pick the next free `homeN`. **Retired slots: `home5`** (unpublished 2026-07-20 — see below). Next free slot is `home13`.
 - **Upstream**: `reverse_proxy <LAN-IP>:<port>` against `192.168.45.x`. Hostnames are not used for upstreams.
+
+## Unpublished services (running, but not fronted by Caddy)
+
+- **OneDrive MCP** — `http://192.168.45.54:8000/mcp`, health at `/health`. Formerly published as `home5.compagnie-lily.org`; unpublished 2026-07-20 because all real traffic was LAN-local while the public name drew ~10k scanner hits. The service itself is untouched and still running — only the Caddy block, the `home5` A record, and the `NAMES` entry were removed.
+  - **Reach it from MCP clients over plain HTTP on the LAN**: `http://192.168.45.54:8000/mcp`. No TLS on this path; the service's own bearer-token auth still applies.
+  - Historic access log (public era, May 9 – Jul 20 2026): `/var/log/caddy/home5-access-2026-07-20T01-56-51-decommissioned.log.gz`.
+  - To re-publish: restore a site block per the standard pattern, re-create the `home5` A record (the updater only refreshes existing records), and re-add `home5` to `NAMES`.
 
 ## Special-case sites
 
