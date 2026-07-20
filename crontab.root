@@ -1,0 +1,8 @@
+# Root crontab entry for the DNS updater on the edge-proxy LXC.
+# Append it to the existing crontab (idempotent-ish; check for dupes first):
+#
+#   crontab -l 2>/dev/null | grep -qF update-77d-records.sh || \
+#     (crontab -l 2>/dev/null; grep -v '^#' crontab.root) | crontab -
+#
+# Or just add the line by hand with `crontab -e`.
+*/5 * * * * /root/caddy-manager/update-77d-records.sh --apply >> /var/log/77d-updater.log 2>&1

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Keep caddy/Caddyfile in sync with the live /etc/caddy/Caddyfile so a commit
+# never ships a stale reverse-proxy config. Enabled via:
+#   git config core.hooksPath hooks
+#
+# Only acts on the edge-proxy host (where the live file exists); a no-op on
+# clones elsewhere.
+set -euo pipefail
+
+LIVE=/etc/caddy/Caddyfile
+SNAP="$(git rev-parse --show-toplevel)/caddy/Caddyfile"
+
+[ -f "$LIVE" ] || exit 0   # not on the proxy host — nothing to sync
+
+if ! diff -q "$LIVE" "$SNAP" >/dev/null 2>&1; then
+	cp "$LIVE" "$SNAP"
+	git add "$SNAP"
+	echo "pre-commit: re-synced caddy/Caddyfile from $LIVE"
+fi

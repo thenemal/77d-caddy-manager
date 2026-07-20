@@ -11,7 +11,8 @@ The A records are kept in sync with the current home WAN IP by
 `update-77d-records.sh`, running on this LXC via root cron.
 
 See `CLAUDE.md` for the full operational picture (Caddyfile conventions,
-ACME setup, the o2switch DNS regression that drove this workaround).
+ACME setup, the o2switch DNS regression that drove this workaround). To rebuild
+this host from scratch, follow `RESTORE.md`.
 
 ## Status
 
@@ -25,10 +26,18 @@ ACME setup, the o2switch DNS regression that drove this workaround).
 | File | Purpose |
 |---|---|
 | `CLAUDE.md` | Project context for Claude Code (and humans). |
+| `RESTORE.md` | Ordered bare-metal bootstrap to rebuild the LXC from this repo. |
+| `caddy/Caddyfile` | Snapshot of the live `/etc/caddy/Caddyfile` (12 sites). The reverse-proxy config. |
+| `caddy/caddy.service` | Reference snapshot of the stock systemd unit (unmodified). |
+| `crontab.root` | The root crontab entry that runs the DNS updater every 5 min. |
 | `cpanel-api.sh` | Thin wrapper around o2switch cPanel UAPI. |
 | `test-dns-edit.sh` | One-shot smoke test of the write path (changes `home5` TTL only). |
 | `update-77d-records.sh` | The main updater — flips/refreshes `homeN` A records to the current WAN IP. |
 | `.cpanel-api.env` | **Not committed.** Holds cPanel host/user/token. Create from `.cpanel-api.env.example`. |
+
+> **Note:** `caddy/Caddyfile` is a snapshot, not the live file. The running
+> config is `/etc/caddy/Caddyfile`; re-sync the snapshot (`cp /etc/caddy/Caddyfile
+> caddy/Caddyfile`) after editing it so a restore doesn't ship stale config.
 
 ## Why this exists
 

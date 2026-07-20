@@ -1,0 +1,203 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# Unless the file starts with a global options block, the first
+# uncommented line is always the address of your site.
+# To use your own domain name (with automatic HTTPS), first make
+# sure your domain's A/AAAA DNS records are properly pointed to
+# this machine's public IP, then replace ":80" below with your
+# domain name.
+{
+	email seb45@duck.com
+}
+
+# Redirect ALL HTTP to HTTPS
+http:// {
+	redir https://{host}{uri} 308
+}
+
+# Common security + performance
+(handle-security) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "no-referrer-when-downgrade"
+		X-Robots-Tag "noindex, nofollow"
+	}
+	encode zstd gzip
+}
+
+# Reusable robots.txt responder
+(block-robots) {
+	@robots path /robots.txt
+	header @robots Content-Type text/plain
+	respond @robots "User-agent: *\nDisallow: /" 200
+}
+
+home.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.19:51823
+}
+
+home2.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home2-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.53:8080
+}
+
+home3.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home3-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.25:3080
+}
+
+home4.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home4-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.39:8123
+}
+
+home5.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home5-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.54:8000
+}
+
+home6.compagnie-lily.org {
+	handle /.well-known/matrix/client {
+		header Content-Type application/json
+		respond `{"m.homeserver": {"base_url": "https://home6.compagnie-lily.org"}}`
+	}
+	handle /.well-known/matrix/server {
+		header Content-Type application/json
+		respond `{"m.server": "home6.compagnie-lily.org:443"}`
+	}
+	reverse_proxy /_matrix/* 192.168.45.20:8008
+	reverse_proxy /_synapse/* 192.168.45.20:8008
+}
+
+home7.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home7-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.20:8009
+}
+
+home9.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	@health path /healthz
+	respond @health 200
+
+	log {
+		output file /var/log/caddy/home9-access.log
+		format json
+	}
+
+	basic_auth {
+		seb $2a$14$DIFsM6uPE7/dg.2VzOsVJeR3aAxBFQ3p44RfjYCNevQ346ILxQeWu
+	}
+
+	reverse_proxy 192.168.45.20:9090
+}
+
+home8.compagnie-lily.org {
+	import handle-security
+	reverse_proxy 192.168.45.20:3005
+}
+
+files.home8.compagnie-lily.org {
+	import handle-security
+	reverse_proxy 192.168.45.20:9000
+}
+
+home10.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	log {
+		output file /var/log/caddy/home10-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.20:9274
+}
+
+home11.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	log {
+		output file /var/log/caddy/home11-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.20:8945
+}
+
+home12.compagnie-lily.org {
+	import handle-security
+	import block-robots
+
+	log {
+		output file /var/log/caddy/home12-access.log
+		format json
+	}
+
+	reverse_proxy 192.168.45.20:8356
+}
